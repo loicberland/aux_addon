@@ -29,3 +29,41 @@ do
         end
     end
 end
+
+-- BagShui handles item button clicks itself before they necessarily reach
+-- UseContainerItem. Hook its inventory click handler directly so right-clicking
+-- an item keeps the same Aux shortcut behaviour as the Blizzard bags.
+do
+    local hooked
+
+    local function hook_bagshui()
+        if hooked then return end
+
+        local bagshui = _G.Bagshui
+        local inventory = bagshui and bagshui.prototypes and bagshui.prototypes.Inventory
+        if not inventory or type(inventory.ItemButton_OnClick) ~= 'function' then return end
+
+        local orig = inventory.ItemButton_OnClick
+        inventory.ItemButton_OnClick = function(self, mouse_button, is_drag)
+            local tab = aux.get_tab()
+            local button = _G.this
+            local data = button and button.bagshuiData
+
+            if mouse_button == 'RightButton' and not is_drag and not aux.modified()
+                and tab and tab.USE_ITEM and data and data.bagNum and data.slotNum then
+                local item_info = info.container_item(data.bagNum, data.slotNum)
+                if item_info then
+                    tab.USE_ITEM(item_info)
+                    return
+                end
+            end
+
+            return orig(self, mouse_button, is_drag)
+        end
+        hooked = true
+    end
+
+    function aux.handle.LOAD2()
+        hook_bagshui()
+    end
+end

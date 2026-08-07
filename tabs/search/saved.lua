@@ -70,11 +70,11 @@ handlers = {
 				local auto_buy = data.search.auto_buy
 				local auto_bid = data.search.auto_bid
 				gui.menu(
-					(auto_buy and 'Disable' or 'Enable') .. ' Auto Buy', function() if auto_buy then data.search.auto_buy = nil else enable_auto_buy(data.search) end u() end,
-					(auto_bid and 'Disable' or 'Enable') .. ' Auto Bid', function() if auto_bid then data.search.auto_bid = nil else enable_auto_bid(data.search) end u() end,
-					'Move Up', function() move_up(favorite_searches, data.index); u() end,
-					'Move Down', function() move_down(favorite_searches, data.index); u() end,
-					'Delete', function() tremove(favorite_searches, data.index); u() end
+					(auto_buy and 'Désactiver' or 'Activer') .. " l'achat auto", function() if auto_buy then data.search.auto_buy = nil else enable_auto_buy(data.search) end u() end,
+					(auto_bid and 'Désactiver' or 'Activer') .. " l'enchère auto", function() if auto_bid then data.search.auto_bid = nil else enable_auto_bid(data.search) end u() end,
+					'Monter', function() move_up(favorite_searches, data.index); u() end,
+					'Descendre', function() move_down(favorite_searches, data.index); u() end,
+					'Supprimer', function() tremove(favorite_searches, data.index); u() end
 				)
 			end
 		end
@@ -99,7 +99,7 @@ function get_auto_buy_validator()
 			if queries then
 				tinsert(validators, queries[1].validator)
 			else
-				aux.print('Invalid auto buy filter:', error)
+				aux.print("Filtre d'achat auto invalide :", error)
 			end
 		end
 	end
@@ -116,7 +116,7 @@ function get_auto_bid_validator()
 			if queries then
 				tinsert(validators, queries[1].validator)
 			else
-				aux.print('Invalid auto bid filter:', error)
+				aux.print("Filtre d'enchère auto invalide :", error)
 			end
 		end
 	end
@@ -134,7 +134,7 @@ function add_favorite(filter_string)
 		))
 		update_search_listings()
 	else
-		aux.print('Invalid filter:', error)
+		aux.print('Filtre invalide :', error)
 	end
 end
 
@@ -142,14 +142,14 @@ function enable_auto_buy(search)
 	local queries, error = filter_util.queries(search.filter_string)
 	if queries then
 		if getn(queries) > 1 then
-			aux.print('Error: Auto Buy does not support multi-queries')
+			aux.print("Erreur : l'achat auto ne prend pas en charge les recherches multiples")
 		elseif aux.size(queries[1].blizzard_query) > 0 and not filter_util.parse_filter_string(search.filter_string).blizzard.exact then
-			aux.print('Error: Auto Buy does not support Blizzard filters')
+			aux.print("Erreur : l'achat auto ne prend pas en charge les filtres Blizzard")
 		else
 			search.auto_buy = true
 		end
 	else
-		aux.print('Invalid filter:', error)
+		aux.print('Filtre invalide :', error)
 	end
 end
 
@@ -157,14 +157,14 @@ function enable_auto_bid(search)
 	local queries, error = filter_util.queries(search.filter_string)
 	if queries then
 		if getn(queries) > 1 then
-			aux.print('Error: Auto Bid does not support multi-queries')
+			aux.print("Erreur : l'enchère auto ne prend pas en charge les recherches multiples")
 		elseif aux.size(queries[1].blizzard_query) > 0 and not filter_util.parse_filter_string(search.filter_string).blizzard.exact then
-			aux.print('Error: Auto Bid does not support Blizzard filters')
+			aux.print("Erreur : l'enchère auto ne prend pas en charge les filtres Blizzard")
 		else
 			search.auto_bid = true
 		end
 	else
-		aux.print('Invalid filter:', error)
+		aux.print('Filtre invalide :', error)
 	end
 end
 

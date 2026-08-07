@@ -119,7 +119,7 @@ function post_auction(slot, k)
 			
 			if disenchant.value(item_info.slot, item_info.quality, item_info.level, item_info.item_id) ~= nil then 
 				if buyout_price < 0.95 * tonumber(disenchant.value(item_info.slot, item_info.quality, item_info.level, item_info.item_id)) -30 then
-					aux.print("autopricing recommends disenchanting!")
+					aux.print("Le prix automatique recommande de désenchanter l'objet !")
 					return stop()
 				end
 			end
@@ -127,13 +127,13 @@ function post_auction(slot, k)
 			if kz_daily == 1 and vendor_price > 0 then 
 				if tonumber(history.value(state.item_key)) < 1.35 * vendor_price 
 				or tonumber(history.market_value(state.item_key)) < 1.35 * vendor_price then
-					aux.print("autopricing recommends vendoring!")
+					aux.print("Le prix automatique recommande de vendre l'objet à un marchand !")
 					return stop()
 				end
 			end
 			
 			if start_price == 0 or (kz_warn == 2 and kz_pricing == 0) then
-				aux.print("insufficient data for autopricing!")
+				aux.print("Données insuffisantes pour le prix automatique !")
 				return stop()
 			end
 			
@@ -141,13 +141,13 @@ function post_auction(slot, k)
 			local silver = floor(mod(start_price, COPPER_PER_GOLD) / COPPER_PER_SILVER)
 			local copper = aux.round(mod(start_price, COPPER_PER_SILVER))
 			
-			aux.print("bid_price: "..gold.."g "..silver.."s "..copper.."c")
+			aux.print("prix d'enchère : "..gold.."g "..silver.."s "..copper.."c")
 			
 			gold = floor(buyout_price / COPPER_PER_GOLD)
 			silver = floor(mod(buyout_price, COPPER_PER_GOLD) / COPPER_PER_SILVER)
 			copper = aux.round(mod(buyout_price, COPPER_PER_SILVER))
 			
-			aux.print("buyout_price: "..gold.."g "..silver.."s "..copper.."c")
+			aux.print("prix de rachat : "..gold.."g "..silver.."s "..copper.."c")
 
 		end
 		

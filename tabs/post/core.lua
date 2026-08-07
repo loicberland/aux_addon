@@ -14,7 +14,7 @@ local item_listing = require 'aux.gui.item_listing'
 local al = require 'aux.gui.auction_listing'
 local gui = require 'aux.gui'
 
-local tab = aux.tab 'Post'
+local tab = aux.tab 'Vente'
 
 local settings_schema = {'tuple', '#', {duration='number'}, {start_price='number'}, {buyout_price='number'}, {hidden='boolean'}, {stack_size='number'}}
 
@@ -196,6 +196,30 @@ function price_update()
     end
 end
 
+-- Après le scan, initialise les deux prix unitaires à 99 % du rachat
+-- concurrent le moins cher. Les enchères du joueur sont volontairement
+-- ignorées afin de ne pas se sous-coter soi-même.
+function set_default_prices_from_scan(item_key)
+	local lowest_buyout
+	for _, record in buyout_records[item_key] or T.empty do
+		if not record.own and record.unit_price and record.unit_price > 0 and (not lowest_buyout or record.unit_price < lowest_buyout) then
+			lowest_buyout = record.unit_price
+		end
+	end
+
+	if not lowest_buyout then
+		return
+	end
+
+	local default_price = max(1, floor(lowest_buyout * 0.99))
+	set_bid_selection()
+	set_buyout_selection()
+	set_unit_start_price(default_price)
+	set_unit_buyout_price(default_price)
+	unit_start_price_input:SetText(money.to_string(default_price, true, nil, nil, true))
+	unit_buyout_price_input:SetText(money.to_string(default_price, true, nil, nil, true))
+end
+
 function post_auctions()
 	if selected_item then
         local unit_start_price = get_unit_start_price()
@@ -327,7 +351,7 @@ function update_item_configuration()
         item.texture:SetTexture(nil)
         item.count:SetText()
         item.name:SetTextColor(aux.color.label.enabled())
-        item.name:SetText('No item selected')
+        item.name:SetText('Aucun objet sélectionné')
 
         unit_start_price_input:Hide()
         unit_buyout_price_input:Hide()
@@ -368,18 +392,18 @@ function update_item_configuration()
             local stack_size, stack_count = selected_item.max_charges and 1 or stack_size_slider:GetValue(), stack_count_slider:GetValue()
             local max_stack = selected_item.max_stack
             local amount = floor(selected_item.unit_vendor_price * stack_size * duration_factor * (1 + (max_stack - stack_size) * 0.05) * deposit_factor) * stack_count
-            deposit:SetText('Deposit: ' .. money.to_string(amount, nil, nil, aux.color.text.enabled))
+            deposit:SetText('Dépôt : ' .. money.to_string(amount, nil, nil, aux.color.text.enabled))
         end
 
         --vendor price
         do
             local unit_vendor_price = selected_item.unit_vendor_price
             if not unit_vendor_price then
-                vendor_price_label:SetText("Unit Vendor Price: N/A")
+                vendor_price_label:SetText("Prix marchand unitaire : N/D")
             elseif unit_vendor_price == 0 then
-                vendor_price_label:SetText("Unit Vendor Price: None")
+                vendor_price_label:SetText("Prix marchand unitaire : Aucun")
             else
-                vendor_price_label:SetText("Unit Vendor Price: " .. money.to_string(unit_vendor_price, nil, nil, aux.color.text.enabled))
+                vendor_price_label:SetText("Prix marchand unitaire : " .. money.to_string(unit_vendor_price, nil, nil, aux.color.text.enabled))
             end
         end
 
@@ -538,7 +562,7 @@ function refresh_entries()
         bid_records[item_key], buyout_records[item_key] = nil, nil
         local query = scan_util.item_query(selected_item.item_id)
         status_bar:update_status(0, 0)
-        status_bar:set_text('Scanning auctions...')
+        status_bar:set_text('Analyse des enchères...')
 
 		scan_id = scan.start{
             type = 'list',
@@ -546,7 +570,7 @@ function refresh_entries()
 			queries = T.list(query),
 			on_page_loaded = function(page, total_pages)
                 status_bar:update_status(page / total_pages, 0) -- TODO
-                status_bar:set_text(format('Scanning Page %d / %d', page, total_pages))
+                status_bar:set_text(format('Analyse de la page %d / %d', page, total_pages))
 			end,
 			on_auction = function(auction_record)
 				if auction_record.item_key == item_key then
@@ -563,14 +587,15 @@ function refresh_entries()
 			on_abort = function()
 				bid_records[item_key], buyout_records[item_key] = nil, nil
                 status_bar:update_status(1, 1)
-                status_bar:set_text('Scan aborted')
+                status_bar:set_text('Analyse interrompue')
 			end,
 			on_complete = function()
 				bid_records[item_key] = bid_records[item_key] or T.acquire()
 				buyout_records[item_key] = buyout_records[item_key] or T.acquire()
+				set_default_prices_from_scan(item_key)
                 refresh = true
                 status_bar:update_status(1, 1)
-                status_bar:set_text('Scan complete')
+                status_bar:set_text('Analyse terminée')
             end,
 		}
 	end
@@ -628,17 +653,17 @@ function initialize_duration_dropdown()
         refresh = true
     end
     UIDropDownMenu_AddButton{
-        text = '6 Hours',
+        text = '6 heures',
         value = DURATION_2,
         func = on_click,
     }
     UIDropDownMenu_AddButton{
-        text = '24 Hours',
+        text = '24 heures',
         value = DURATION_8,
         func = on_click,
     }
     UIDropDownMenu_AddButton{
-        text = '72 Hours',
+        text = '72 heures',
         value = DURATION_24,
         func = on_click,
     }

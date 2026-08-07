@@ -45,8 +45,8 @@ do
             for _, f in handlers_LOAD do f() end
 		elseif event == 'PLAYER_LOGIN' then
 			for _, f in handlers_LOAD2 do f() end
-			print('loaded - /aux')
-			DEFAULT_CHAT_FRAME:AddMessage(LIGHTYELLOW_FONT_COLOR_CODE .. 'aux now comes with a new blizz-like theme. If you wish to switch between themes, use /aux theme')
+			print('chargé - /aux')
+			DEFAULT_CHAT_FRAME:AddMessage(LIGHTYELLOW_FONT_COLOR_CODE .. "aux utilise désormais un nouveau thème proche de l'interface Blizzard. Pour changer de thème, utilisez /aux theme")
 		else
 			_M[event]()
 		end

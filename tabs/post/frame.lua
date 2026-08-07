@@ -48,7 +48,7 @@ function aux.handle.INIT_UI()
         end)
         local label = gui.label(checkbox, gui.font_size.small)
         label:SetPoint('LEFT', checkbox, 'RIGHT', 4, 1)
-        label:SetText('Show hidden items')
+        label:SetText('Afficher les objets masqués')
         show_hidden_checkbox = checkbox
     end
 
@@ -77,11 +77,11 @@ function aux.handle.INIT_UI()
 
     bid_listing = listing.new(frame.bid_listing)
     bid_listing:SetColInfo{
-        {name='Auctions', width=.17, align='CENTER'},
-        {name='Time\nLeft', width=.11, align='CENTER'},
-        {name='Stack\nSize', width=.11, align='CENTER'},
-        {name='Auction Bid\n(per item)', width=.4, align='RIGHT'},
-        {name='% Hist.\nValue', width=.21, align='CENTER'},
+        {name='Enchères', width=.17, align='CENTER'},
+        {name='Temps\nrestant', width=.11, align='CENTER'},
+        {name='Taille\npile', width=.11, align='CENTER'},
+        {name='Enchère\n(par objet)', width=.4, align='RIGHT'},
+        {name='% Valeur\nhist.', width=.21, align='CENTER'},
     }
     bid_listing:SetSelection(function(data)
         return data.record == get_bid_selection() or data.record.historical_value and get_bid_selection() and get_bid_selection().historical_value
@@ -101,11 +101,11 @@ function aux.handle.INIT_UI()
 
     buyout_listing = listing.new(frame.buyout_listing)
     buyout_listing:SetColInfo{
-        {name='Auctions', width=.17, align='CENTER'},
-        {name='Time\nLeft', width=.11, align='CENTER'},
-        {name='Stack\nSize', width=.12, align='CENTER'},
-        {name='Auction Buyout\n(per item)', width=.4, align='RIGHT'},
-        {name='% Hist.\nValue', width=.20, align='CENTER'},
+        {name='Enchères', width=.17, align='CENTER'},
+        {name='Temps\nrestant', width=.11, align='CENTER'},
+        {name='Taille\npile', width=.12, align='CENTER'},
+        {name='Rachat\n(par objet)', width=.4, align='RIGHT'},
+        {name='% Valeur\nhist.', width=.20, align='CENTER'},
     }
     buyout_listing:SetSelection(function(data)
         return data.record == get_buyout_selection() or data.record.historical_value and get_buyout_selection() and get_buyout_selection().historical_value
@@ -134,14 +134,15 @@ function aux.handle.INIT_UI()
     do
         local btn = gui.button(frame.parameters)
         btn:SetPoint('TOPLEFT', status_bar, 'TOPRIGHT', 5, 0)
-        btn:SetText('Post')
+        btn:SetWidth(110)
+        btn:SetText('Mettre en vente')
         btn:SetScript('OnClick', post_auctions)
         post_button = btn
     end
     do
         local btn = gui.button(frame.parameters)
         btn:SetPoint('TOPLEFT', post_button, 'TOPRIGHT', 5, 0)
-        btn:SetText('Refresh')
+        btn:SetText('Actualiser')
         btn:SetScript('OnClick', refresh_button_click)
         refresh_button = btn
     end
@@ -210,7 +211,7 @@ function aux.handle.INIT_UI()
         end
         slider.editbox:SetNumeric(true)
         slider.editbox:SetMaxLetters(3)
-        slider.label:SetText('Stack Size')
+        slider.label:SetText('Taille de pile')
         stack_size_slider = slider
     end
     do
@@ -233,7 +234,7 @@ function aux.handle.INIT_UI()
             end
         end)
         slider.editbox:SetNumeric(true)
-        slider.label:SetText('Stack Count')
+        slider.label:SetText('Nombre de piles')
         stack_count_slider = slider
     end
     do
@@ -242,7 +243,7 @@ function aux.handle.INIT_UI()
         dropdown:SetWidth(90)
         local label = gui.label(dropdown, gui.font_size.small)
         label:SetPoint('BOTTOMLEFT', dropdown, 'TOPLEFT', -2, -3)
-        label:SetText('Duration')
+        label:SetText('Durée')
         UIDropDownMenu_Initialize(dropdown, initialize_duration_dropdown)
         dropdown:SetScript('OnShow', function()
             UIDropDownMenu_Initialize(this, initialize_duration_dropdown)
@@ -260,7 +261,7 @@ function aux.handle.INIT_UI()
         end)
         local label = gui.label(checkbox, gui.font_size.small)
         label:SetPoint('LEFT', checkbox, 'RIGHT', 4, 1)
-        label:SetText('Hide this item')
+        label:SetText('Masquer cet objet')
         hide_checkbox = checkbox
     end
     do
@@ -287,7 +288,7 @@ function aux.handle.INIT_UI()
         do
             local label = gui.label(editbox, gui.font_size.small)
             label:SetPoint('BOTTOMLEFT', editbox, 'TOPLEFT', -2, 1)
-            label:SetText('Unit Starting Price')
+            label:SetText("Prix d'enchère unitaire")
         end
         do
             local label = gui.label(editbox, 14)
@@ -322,7 +323,7 @@ function aux.handle.INIT_UI()
         do
             local label = gui.label(editbox, gui.font_size.small)
             label:SetPoint('BOTTOMLEFT', editbox, 'TOPLEFT', -2, 1)
-            label:SetText('Unit Buyout Price')
+            label:SetText('Prix de rachat unitaire')
         end
         do
             local label = gui.label(editbox, 14)
@@ -356,11 +357,11 @@ function aux.handle.INIT_UI()
         else
             frame.bid_listing:Hide()
             buyout_listing:SetColInfo{
-                {name='Auctions', width=.15, align='CENTER'},
-                {name='Time Left', width=.15, align='CENTER'},
-                {name='Stack Size', width=.15, align='CENTER'},
-                {name='Auction Buyout (per item)', width=.4, align='RIGHT'},
-                {name='% Hist. Value', width=.15, align='CENTER'},
+                {name='Enchères', width=.15, align='CENTER'},
+                {name='Temps restant', width=.15, align='CENTER'},
+                {name='Taille pile', width=.15, align='CENTER'},
+                {name='Rachat (par objet)', width=.4, align='RIGHT'},
+                {name='% Valeur hist.', width=.15, align='CENTER'},
             }
         end
     end

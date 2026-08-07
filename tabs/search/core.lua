@@ -3,11 +3,11 @@ module 'aux.tabs.search'
 local aux = require 'aux'
 local info = require 'aux.util.info'
 
-local tab = aux.tab 'Search'
+local tab = aux.tab 'Recherche'
 
 StaticPopupDialogs.AUX_SEARCH_TABLE_FULL = {
-    text = 'Table full!\nFurther results from this search will still be processed but no longer displayed in the table.',
-    button1 = 'Ok',
+    text = 'Tableau plein !\nLes résultats suivants seront toujours traités mais ne seront plus affichés dans le tableau.',
+    button1 = 'OK',
     showAlert = 1,
     timeout = 0,
     hideOnEscape = 1,
@@ -82,4 +82,3 @@ function blizzard_page_index(str)
         return max(0, tonumber(str) - 1)
     end
 end
-

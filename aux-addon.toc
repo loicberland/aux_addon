@@ -2,7 +2,7 @@
 ## Author: shirsig
 ## OptionalDeps: ShaguTweaks
 ## Title: aux
-## Notes: Auction House replacement
+## Notes: Remplacement de l'hôtel des ventes
 ## SavedVariables: aux
 
 libs\package.lua
@@ -55,5 +55,4 @@ tabs\bids\frame.lua
 core\crafting.lua
 
 localization.lua
-
 

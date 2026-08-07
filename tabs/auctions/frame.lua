@@ -49,14 +49,14 @@ function aux.handle.INIT_UI()
     do
         local btn = gui.button(frame)
         btn:SetPoint('TOPLEFT', status_bar, 'TOPRIGHT', 5, 0)
-        btn:SetText('Cancel')
+        btn:SetText('Annuler')
         btn:Disable()
         cancel_button = btn
     end
     do
         local btn = gui.button(frame)
         btn:SetPoint('TOPLEFT', cancel_button, 'TOPRIGHT', 5, 0)
-        btn:SetText('Refresh')
+        btn:SetText('Actualiser')
         btn:SetScript('OnClick', function()
             scan_auctions()
         end)

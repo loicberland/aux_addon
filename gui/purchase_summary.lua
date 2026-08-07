@@ -55,7 +55,7 @@ function create_purchase_summary_frame()
 	-- Title text using aux color scheme
 	local title = purchase_summary_frame:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
 	title:SetPoint('TOPLEFT', 8, -8)
-	title:SetText('Purchase Summary')
+	title:SetText('Résumé des achats')
 	title:SetTextColor(aux.color.label.enabled())
 	purchase_summary_frame.title = title
 
@@ -72,7 +72,7 @@ function create_purchase_summary_frame()
 	header_item:SetPoint('TOPLEFT', title, 'BOTTOMLEFT', 0, -4)
 	header_item:SetWidth(150)
 	header_item:SetJustifyH('LEFT')
-	header_item:SetText('Item')
+	header_item:SetText('Objet')
 	header_item:SetTextColor(aux.color.label.enabled())
 	purchase_summary_frame.header_item = header_item
 
@@ -80,7 +80,7 @@ function create_purchase_summary_frame()
 	header_count:SetPoint('LEFT', header_item, 'RIGHT', 5, 0)
 	header_count:SetWidth(40)
 	header_count:SetJustifyH('RIGHT')
-	header_count:SetText('Count')
+	header_count:SetText('Nombre')
 	header_count:SetTextColor(aux.color.label.enabled())
 	purchase_summary_frame.header_count = header_count
 
@@ -88,7 +88,7 @@ function create_purchase_summary_frame()
 	header_cost:SetPoint('LEFT', header_count, 'RIGHT', 5, 0)
 	header_cost:SetWidth(80)
 	header_cost:SetJustifyH('RIGHT')
-	header_cost:SetText('Gold Spent')
+	header_cost:SetText('Dépensé')
 	header_cost:SetTextColor(aux.color.label.enabled())
 	purchase_summary_frame.header_cost = header_cost
 
