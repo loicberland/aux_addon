@@ -66,7 +66,7 @@ function handle.LOAD()
         ignore_owner = true,
         crafting_cost = true,
         post_bid = false,
-        post_duration = post.DURATION_24,
+        post_duration = post.DURATION_2,
         post_stack = true,
         undercut = true,
         price_per_unit = false,
