@@ -211,7 +211,7 @@ function set_default_prices_from_scan(item_key)
 		return
 	end
 
-	local default_price = max(1, floor(lowest_buyout * 1.05))
+	local default_price = max(1, floor(lowest_buyout * 1.00))
 	set_bid_selection()
 	set_buyout_selection()
 	set_unit_start_price(default_price)
