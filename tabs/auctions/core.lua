@@ -1,20 +1,25 @@
 module 'aux.tabs.auctions'
 
-local T = require 'T'
-local aux = require 'aux'
+include 'T'
+include 'aux'
+
 local scan_util = require 'aux.util.scan'
 local scan = require 'aux.core.scan'
 
-local tab = aux.tab 'Mes enchères'
+TAB 'Auctions'
 
-auction_records = T.acquire()
+auction_records = T
 
-function tab.OPEN()
-    frame:Show()
-    scan_auctions()
+function LOAD()
+	event_listener('AUCTION_OWNED_LIST_UPDATE', scan_auctions)
 end
 
-function tab.CLOSE()
+function OPEN()
+    frame:Show()
+    GetOwnerAuctionItems()
+end
+
+function CLOSE()
     frame:Hide()
 end
 
@@ -25,35 +30,30 @@ end
 function M.scan_auctions()
 
     status_bar:update_status(0, 0)
-    status_bar:set_text('Analyse des enchères...')
+    status_bar:set_text('Scanning auctions...')
 
-    T.wipe(auction_records)
+    wipe(auction_records)
     update_listing()
     scan.start{
         type = 'owner',
-        queries = {{blizzard_query = T.acquire()}},
-        on_page_loaded = function(page, total_pages)
-            status_bar:update_status(page / total_pages, 0)
-            status_bar:set_text(format('Analyse (Page %d / %d)', page, total_pages))
-        end,
         on_auction = function(auction_record)
             tinsert(auction_records, auction_record)
         end,
         on_complete = function()
             status_bar:update_status(1, 1)
-            status_bar:set_text('Analyse terminée')
+            status_bar:set_text('Scan complete')
             update_listing()
         end,
         on_abort = function()
             status_bar:update_status(1, 1)
-            status_bar:set_text('Analyse interrompue')
+            status_bar:set_text('Scan aborted')
         end,
     }
 end
 
 do
     local scan_id = 0
-    local IDLE, SEARCHING, FOUND = aux.enum(3)
+    local IDLE, SEARCHING, FOUND = T, T, T
     local state = IDLE
     local found_index
 
@@ -73,7 +73,7 @@ do
 
                 cancel_button:SetScript('OnClick', function()
                     if scan_util.test(record, index) and listing:ContainsRecord(record) then
-                        aux.cancel_auction(index, function() listing:RemoveAuctionRecord(record) end)
+                        cancel_auction(index, function() listing:RemoveAuctionRecord(record) end)
                     end
                 end)
                 cancel_button:Enable()
@@ -95,7 +95,7 @@ do
             find_auction(selection.record)
         elseif state == FOUND and not scan_util.test(selection.record, found_index) then
             cancel_button:Disable()
-            if not aux.cancel_in_progress() then state = IDLE end
+            if not cancel_in_progress then state = IDLE end
         end
     end
 end

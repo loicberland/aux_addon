@@ -1,31 +1,27 @@
 module 'aux.gui.auction_listing'
 
-local T = require 'T'
-local aux = require 'aux'
+include 'T'
+include 'aux'
+
 local info = require 'aux.util.info'
 local sort_util = require 'aux.util.sort'
 local money = require 'aux.util.money'
 local history = require 'aux.core.history'
 local gui = require 'aux.gui'
+local search_tab = require 'aux.tabs.search'
 local tooltip = require 'aux.core.tooltip'
+local cache = require 'aux.core.cache'
 
 local price_per_unit = false
-
--- Initialize from account data when available
-aux.handle.LOAD = function()
-    if aux.account_data and aux.account_data.price_per_unit ~= nil then
-        price_per_unit = aux.account_data.price_per_unit
-    end
-end
 
 local HEAD_HEIGHT = 27
 local HEAD_SPACE = 2
 
 local TIME_LEFT_STRINGS = {
-	aux.color.red'30m', -- Short
-	aux.color.orange'2h', -- Medium
-	aux.color.yellow'8h', -- Long
-	aux.color.blue'72h', -- Very Long
+	color.red'30m', -- Short
+	color.orange'2h', -- Medium
+	color.yellow(_VERSION and '12h' or '8h'), -- Long
+	color.blue(_VERSION and '48h' or '24h'), -- Very Long
 }
 
 function item_column_init(rt, cell)
@@ -72,7 +68,7 @@ end
 
 M.search_columns = {
     {
-        title = 'Objet',
+        title = 'Item',
         width = .35,
         init = item_column_init,
         fill = item_column_fill,
@@ -81,12 +77,12 @@ M.search_columns = {
         end,
     },
     {
-        title = 'Niv.',
+        title = 'Lvl',
         width = .035,
         align = 'CENTER',
         fill = function(cell, record)
             local display_level = max(record.level, 1)
-            display_level = UnitLevel'player' < record.level and aux.color.red(display_level) or display_level
+            display_level = UnitLevel'player' < record.level and color.red(display_level) or display_level
             cell.text:SetText(display_level)
         end,
         cmp = function(record_a, record_b, desc)
@@ -94,13 +90,13 @@ M.search_columns = {
         end,
     },
     {
-        title = 'Enchères',
+        title = 'Auctions',
         width = .06,
         align = 'CENTER',
         fill = function(cell, record, count, own, expandable)
-            local numAuctionsText = expandable and aux.color.link(count) or count
+            local numAuctionsText = expandable and color.link(count) or count
             if own > 0 then
-                numAuctionsText = numAuctionsText .. (' ' .. aux.color.yellow('(' .. own .. ')'))
+                numAuctionsText = numAuctionsText .. (' ' .. color.yellow('(' .. own .. ')'))
             end
             cell.text:SetText(numAuctionsText)
         end,
@@ -118,7 +114,7 @@ M.search_columns = {
         end,
     },
     {
-        title = 'Taille\npile',
+        title = 'Stack\nSize',
         width = .055,
         align = 'CENTER',
         fill = function(cell, record)
@@ -129,7 +125,7 @@ M.search_columns = {
         end,
     },
     {
-        title = 'Temps\nrestant',
+        title = 'Time\nLeft',
         width = .04,
         align = 'CENTER',
         fill = function(cell, record)
@@ -140,11 +136,11 @@ M.search_columns = {
         end,
     },
     {
-        title = 'Vendeur',
+        title = 'Seller',
         width = .13,
         align = 'CENTER',
         fill = function(cell, record)
-            cell.text:SetText(info.is_player(record.owner) and (aux.color.yellow(record.owner)) or (record.owner or '?'))
+            cell.text:SetText(cache.is_player(record.owner) and (color.yellow(record.owner)) or (record.owner or '?'))
         end,
         cmp = function(record_a, record_b, desc)
             if not record_a.owner and not record_b.owner then
@@ -159,16 +155,16 @@ M.search_columns = {
         end,
     },
     {
-        title = {'Enchère\n(par objet)', 'Enchère\n(par pile)'},
+        title = {'Auction Bid\n(per item)', 'Auction Bid\n(per stack)'},
         width = .125,
         align = 'RIGHT',
         isPrice = true,
         fill = function(cell, record)
             local price_color
             if record.high_bidder then
-	            price_color = aux.color.green
+	            price_color = color.green
             elseif record.high_bid ~= 0 then
-	            price_color = aux.color.orange
+	            price_color = color.orange
             end
             local price
             if record.high_bidder then
@@ -207,7 +203,7 @@ M.search_columns = {
         end,
     },
     {
-        title = {'Rachat\n(par objet)', 'Rachat\n(par pile)'},
+        title = {'Auction Buyout\n(per item)', 'Auction Buyout\n(per stack)'},
         width = .125,
         align = 'RIGHT',
         isPrice = true,
@@ -218,23 +214,23 @@ M.search_columns = {
         cmp = function(record_a, record_b, desc)
             local price_a = price_per_unit and record_a.unit_buyout_price or record_a.buyout_price
             local price_b = price_per_unit and record_b.unit_buyout_price or record_b.buyout_price
-            price_a = price_a > 0 and price_a or (desc and -aux.huge or aux.huge)
-            price_b = price_b > 0 and price_b or (desc and -aux.huge or aux.huge)
+            price_a = price_a > 0 and price_a or (desc and -huge or huge)
+            price_b = price_b > 0 and price_b or (desc and -huge or huge)
 
             return sort_util.compare(price_a, price_b, desc)
         end,
     },
     {
-        title = '% Valeur\nhist.',
+        title = '% Hist.\nValue',
         width = .08,
         align = 'CENTER',
         fill = function(cell, record)
             local pct, bidPct = record_percentage(record)
-            cell.text:SetText((pct or bidPct) and gui.percentage_historical(pct or bidPct, not pct) or '?')
+            cell.text:SetText((pct or bidPct) and percentage_historical(pct or bidPct, not pct) or '?')
         end,
         cmp = function(record_a, record_b, desc)
-            local pct_a = record_percentage(record_a) or (desc and -aux.huge or aux.huge)
-            local pct_b = record_percentage(record_b) or (desc and -aux.huge or aux.huge)
+            local pct_a = record_percentage(record_a) or (desc and -huge or huge)
+            local pct_b = record_percentage(record_b) or (desc and -huge or huge)
             return sort_util.compare(pct_a, pct_b, desc)
         end,
     },
@@ -242,7 +238,7 @@ M.search_columns = {
 
 M.auctions_columns = {
     {
-        title = 'Objet',
+        title = 'Item',
         width = .35,
         init = item_column_init,
         fill = item_column_fill,
@@ -251,12 +247,12 @@ M.auctions_columns = {
         end,
     },
     {
-        title = 'Niv.',
+        title = 'Lvl',
         width = .035,
         align = 'CENTER',
         fill = function(cell, record)
             local display_level = max(record.level, 1)
-            display_level = UnitLevel('player') < record.level and aux.color.red(display_level) or display_level
+            display_level = UnitLevel('player') < record.level and color.red(display_level) or display_level
             cell.text:SetText(display_level)
         end,
         cmp = function(record_a, record_b, desc)
@@ -264,11 +260,11 @@ M.auctions_columns = {
         end,
     },
     {
-        title = 'Enchères',
+        title = 'Auctions',
         width = .06,
         align = 'CENTER',
         fill = function(cell, record, count, own, expandable)
-            local numAuctionsText = expandable and aux.color.link(count) or count
+            local numAuctionsText = expandable and color.link(count) or count
             cell.text:SetText(numAuctionsText)
         end,
         cmp = function(record_a, record_b, desc)
@@ -285,7 +281,7 @@ M.auctions_columns = {
         end,
     },
     {
-        title = 'Taille\npile',
+        title = 'Stack\nSize',
         width = .055,
         align = 'CENTER',
         fill = function(cell, record)
@@ -296,7 +292,7 @@ M.auctions_columns = {
         end,
     },
     {
-        title = 'Temps\nrestant',
+        title = 'Time\nLeft',
         width = .04,
         align = 'CENTER',
         fill = function(cell, record)
@@ -307,7 +303,7 @@ M.auctions_columns = {
         end,
     },
     {
-        title = {'Enchère\n(par objet)', 'Enchère\n(par pile)'},
+        title = {'Auction Bid\n(per item)', 'Auction Bid\n(per stack)'},
         width = .125,
         align = 'RIGHT',
         isPrice = true,
@@ -337,7 +333,7 @@ M.auctions_columns = {
         end,
     },
     {
-        title = {'Rachat\n(par objet)', 'Rachat\n(par pile)'},
+        title = {'Auction Buyout\n(per item)', 'Auction Buyout\n(per stack)'},
         width = .125,
         align = 'RIGHT',
         isPrice = true,
@@ -348,18 +344,18 @@ M.auctions_columns = {
         cmp = function(record_a, record_b, desc)
             local price_a = price_per_unit and record_a.unit_buyout_price or record_a.buyout_price
             local price_b = price_per_unit and record_b.unit_buyout_price or record_b.buyout_price
-            price_a = price_a > 0 and price_a or (desc and -aux.huge or aux.huge)
-            price_b = price_b > 0 and price_b or (desc and -aux.huge or aux.huge)
+            price_a = price_a > 0 and price_a or (desc and -huge or huge)
+            price_b = price_b > 0 and price_b or (desc and -huge or huge)
 
             return sort_util.compare(price_a, price_b, desc)
         end,
     },
     {
-        title = 'Meilleur enchérisseur',
+        title = 'High Bidder',
         width = .21,
         align = 'CENTER',
         fill = function(cell, record)
-            cell.text:SetText(record.high_bidder or aux.color.red 'Aucune enchère')
+            cell.text:SetText(record.high_bidder or color.red 'No Bids')
         end,
         cmp = function(record_a, record_b, desc)
             if not record_a.high_bidder and not record_b.high_bidder then
@@ -377,7 +373,7 @@ M.auctions_columns = {
 
 M.bids_columns = {
     {
-        title = 'Objet',
+        title = 'Item',
         width = .35,
         init = item_column_init,
         fill = item_column_fill,
@@ -386,11 +382,11 @@ M.bids_columns = {
         end,
     },
     {
-        title = 'Enchères',
+        title = 'Auctions',
         width = .06,
         align = 'CENTER',
         fill = function(cell, record, count, own, expandable)
-            local numAuctionsText = expandable and aux.color.link(count) or count
+            local numAuctionsText = expandable and color.link(count) or count
             cell.text:SetText(numAuctionsText)
         end,
         cmp = function(record_a, record_b, desc)
@@ -407,7 +403,7 @@ M.bids_columns = {
         end,
     },
     {
-        title = 'Taille\npile',
+        title = 'Stack\nSize',
         width = .055,
         align = 'CENTER',
         fill = function(cell, record)
@@ -418,7 +414,7 @@ M.bids_columns = {
         end,
     },
     {
-        title = 'Temps\nrestant',
+        title = 'Time\nLeft',
         width = .04,
         align = 'CENTER',
         fill = function(cell, record)
@@ -429,11 +425,11 @@ M.bids_columns = {
         end,
     },
     {
-        title = 'Vendeur',
+        title = 'Seller',
         width = .13,
         align = 'CENTER',
         fill = function(cell, record)
-            cell.text:SetText(info.is_player(record.owner) and (aux.color.yellow(record.owner)) or (record.owner or '?'))
+            cell.text:SetText(cache.is_player(record.owner) and (color.yellow(record.owner)) or (record.owner or '?'))
         end,
         cmp = function(record_a, record_b, desc)
             if not record_a.owner and not record_b.owner then
@@ -448,7 +444,7 @@ M.bids_columns = {
         end,
     },
     {
-        title = {'Enchère\n(par objet)', 'Enchère\n(par pile)'},
+        title = {'Auction Bid\n(per item)', 'Auction Bid\n(per stack)'},
         width = .125,
         align = 'RIGHT',
         isPrice = true,
@@ -478,7 +474,7 @@ M.bids_columns = {
         end,
     },
     {
-        title = {'Rachat\n(par objet)', 'Rachat\n(par pile)'},
+        title = {'Auction Buyout\n(per item)', 'Auction Buyout\n(per stack)'},
         width = .125,
         align = 'RIGHT',
         isPrice = true,
@@ -489,22 +485,22 @@ M.bids_columns = {
         cmp = function(record_a, record_b, desc)
             local price_a = price_per_unit and record_a.unit_buyout_price or record_a.buyout_price
             local price_b = price_per_unit and record_b.unit_buyout_price or record_b.buyout_price
-            price_a = price_a > 0 and price_a or (desc and -aux.huge or aux.huge)
-            price_b = price_b > 0 and price_b or (desc and -aux.huge or aux.huge)
+            price_a = price_a > 0 and price_a or (desc and -huge or huge)
+            price_b = price_b > 0 and price_b or (desc and -huge or huge)
 
             return sort_util.compare(price_a, price_b, desc)
         end,
     },
     {
-        title = 'Statut',
+        title = 'Status',
         width = .115,
         align = 'CENTER',
         fill = function(cell, record)
             local status
             if record.high_bidder then
-                status = aux.color.yellow'Meilleur enchérisseur'
+                status = color.yellow'High Bidder'
             else
-                status = aux.color.red'Surenchéri'
+                status = color.red'Outbid'
             end
             cell.text:SetText(status)
         end,
@@ -520,9 +516,26 @@ function record_percentage(record)
     local historical_value = history.value(record.item_key) or 0
     if historical_value > 0 then
         if record.unit_buyout_price > 0 then
-            return aux.round(100 * record.unit_buyout_price / historical_value)
+            return round(100 * record.unit_buyout_price / historical_value)
         end
-        return nil, aux.round(100 * record.unit_bid_price / historical_value)
+        return nil, round(100 * record.unit_bid_price / historical_value)
+    end
+end
+
+function M.percentage_historical(pct, bid)
+    local text = (pct > 10000 and '>10000' or pct) .. '%'
+    if bid then
+        return color.gray(text)
+    elseif pct < 50 then
+        return color.blue(text)
+    elseif pct < 80 then
+        return color.green(text)
+    elseif pct < 110 then
+        return color.yellow(text)
+    elseif pct < 135 then
+        return color.orange(text)
+    else
+        return color.red(text)
     end
 end
 
@@ -534,14 +547,14 @@ local methods = {
 
     ResizeColumns = function(self)
         local weight = 0
-        for _, cell in self.headCells do
+        for _, cell in pairs(self.headCells) do
             weight = weight + cell.info.width
         end
         weight = (self.contentFrame:GetRight() - self.contentFrame:GetLeft()) / weight
-        for i, cell in self.headCells do
+        for i, cell in pairs(self.headCells) do
             local width = cell.info.width * weight
             cell:SetWidth(width)
-            for _, row in self.rows do
+            for _, row in pairs(self.rows) do
                 row.cells[i]:SetWidth(width)
             end
         end
@@ -553,8 +566,7 @@ local methods = {
 
         if button == 'RightButton' and rt.headCells[this.columnIndex].info.isPrice then
             price_per_unit = not price_per_unit
-            aux.account_data.price_per_unit = price_per_unit
-            for _, cell in rt.headCells do
+            for _, cell in pairs(rt.headCells) do
                 if cell.info.isPrice then
                     cell:SetText(cell.info.title[price_per_unit and 1 or 2])
                 end
@@ -589,11 +601,11 @@ local methods = {
         local rt = this.rt
         if rt.expanded[this.expandKey] then
             GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
-            GameTooltip:AddLine("Double-cliquez pour réduire cet objet et n'afficher que l'enchère la moins chère.", 1, 1, 1, true)
+            GameTooltip:AddLine('Double-click to collapse this item and show only the cheapest auction.', 1, 1, 1, true)
             GameTooltip:Show()
         elseif this.expandable then
             GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
-            GameTooltip:AddLine('Double-cliquez pour développer cet objet et afficher toutes les enchères.', 1, 1, 1, true)
+            GameTooltip:AddLine('Double-click to expand this item and show all the auctions.', 1, 1, 1, true)
             GameTooltip:Show()
         end
 
@@ -613,12 +625,17 @@ local methods = {
             DressUpItemLink(this.record.link)
         elseif IsShiftKeyDown() and ChatFrameEditBox:IsVisible() then
             ChatFrameEditBox:Insert(this.record.link)
+        elseif not modified and button == 'RightButton' then -- TODO not when alt (how?)
+            tab = 1
+            search_tab.filter = strlower(info.item(this.record.item_id).name) .. '/exact'
+            search_tab.execute(nil, false)
         else
             local selection = this.rt:GetSelection()
             if not selection or selection.record ~= this.record then
                 this.rt:SetSelectedRecord(this.record)
+            elseif this.rt.handlers.OnClick then
+                this.rt.handlers.OnClick(this, button)
             end
-	        do (this.rt.handlers.OnClick or pass)(this, button) end
         end
     end,
 
@@ -637,21 +654,21 @@ local methods = {
     UpdateRowInfo = function(self)
 	    for _, v in ipairs(self.rowInfo) do
 		    if type(v) == 'table' then
-			    for _, child in v.children do
-				    T.release(child)
+			    for _, child in pairs(v.children) do
+				    release(child)
 			    end
-			    T.release(v.children)
-			    T.release(v)
+			    release(v.children)
+			    release(v)
 		    end
 	    end
-        T.wipe(self.rowInfo)
+        wipe(self.rowInfo)
         self.rowInfo.numDisplayRows = 0
         self.isSorted = nil
         self:SetSelectedRecord(nil, true)
 
 	    local records = self.records
 
-	    local single_item = aux.all(records, function(record) return record.item_key == records[1].item_key end)
+	    local single_item = all(records, function(record) return record.item_key == records[1].item_key end)
 
         sort(records, function(a, b) return a.search_signature < b.search_signature or a.search_signature == b.search_signature and tostring(a) < tostring(b) end)
 
@@ -663,22 +680,22 @@ local methods = {
                 self.rowInfo[getn(self.rowInfo)].children[getn(self.rowInfo[getn(self.rowInfo)].children)].count = self.rowInfo[getn(self.rowInfo)].children[getn(self.rowInfo[getn(self.rowInfo)].children)].count + 1
             elseif not single_item and prevRecord and record.item_key == prevRecord.item_key then
                 -- it's the same base item as the previous row so insert a new auction
-                tinsert(self.rowInfo[getn(self.rowInfo)].children, T.map('count', 1, 'record', record))
+                tinsert(self.rowInfo[getn(self.rowInfo)].children, O('count', 1, 'record', record))
                 if self.expanded[self.rowInfo[getn(self.rowInfo)].expandKey] then
                     self.rowInfo.numDisplayRows = self.rowInfo.numDisplayRows + 1
                 end
             else
                 -- it's a different base item from the previous row
-                tinsert(self.rowInfo, T.map('item_key', record.item_key, 'expandKey', record.item_key, 'children', T.list(T.map('count', 1, 'record', record))))
+                tinsert(self.rowInfo, O('item_key', record.item_key, 'expandKey', record.item_key, 'children', A(O('count', 1, 'record', record))))
                 self.rowInfo.numDisplayRows = self.rowInfo.numDisplayRows + 1
             end
         end
 
 	    for _, v in ipairs(self.rowInfo) do
             local totalAuctions, totalPlayerAuctions = 0, 0
-            for _, childInfo in v.children do
+            for _, childInfo in pairs(v.children) do
                 totalAuctions = totalAuctions + childInfo.count
-                if info.is_player(childInfo.record.owner) then
+                if cache.is_player(childInfo.record.owner) then
                     totalPlayerAuctions = totalPlayerAuctions + childInfo.count
                 end
             end
@@ -689,7 +706,7 @@ local methods = {
 
     UpdateRows = function(self)
 	    if self.rowInfo.numDisplayRows > getn(self.rows) then
-		    self.contentFrame:SetPoint('BOTTOMRIGHT', gui.is_blizzard() and -30 or -15, 0)
+		    self.contentFrame:SetPoint('BOTTOMRIGHT', -15, 0)
 	    else
 		    self.contentFrame:SetPoint('BOTTOMRIGHT', 0, 0)
 	    end
@@ -702,34 +719,19 @@ local methods = {
 		    FauxScrollFrame_SetOffset(self.scrollFrame, maxOffset)
 	    end
 
-        for _, cell in self.headCells do
+        for _, cell in pairs(self.headCells) do
             local tex = cell:GetNormalTexture()
-            if not gui.is_blizzard() then
-                tex:SetTexture[[Interface\AddOns\aux-AddOn\WorldStateFinalScore-Highlight]]
-                tex:SetTexCoord(.017, 1, .083, .909)
-                tex:SetAlpha(.5)
-            else
-                tex:SetTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
-                tex:SetTexCoord(0.1, 0.8, 0, 1)
-                tex:SetVertexColor(1, 1, 1)
-            end
+            tex:SetTexture[[Interface\AddOns\aux-AddOn\WorldStateFinalScore-Highlight]]
+            tex:SetTexCoord(.017, 1, .083, .909)
+            tex:SetAlpha(.5)
         end
 
         if getn(self.sorts) > 0 then
             local last_sort = self.sorts[1]
-            local tex = self.headCells[last_sort.index]:GetNormalTexture()
             if last_sort.descending then
-                if not gui.is_blizzard() then
-                    tex:SetTexture(.8, .6, 1, .8)
-                else
-                    tex:SetVertexColor(0.75, .5, 1)
-                end
+                self.headCells[last_sort.index]:GetNormalTexture():SetTexture(.8, .6, 1, .8)
             else
-                if not gui.is_blizzard() then
-                    tex:SetTexture(.6, .8, 1, .8)
-                else
-                    tex:SetVertexColor(.5, .75, 1)
-                end
+                self.headCells[last_sort.index]:GetNormalTexture():SetTexture(.6, .8, 1, .8)
             end
         end
 
@@ -745,7 +747,7 @@ local methods = {
                     record_b = b.record
                 end
 
-                for _, sort in self.sorts do
+                for _, sort in pairs(self.sorts) do
                     local ordering = self.columns[sort.index].cmp and self.columns[sort.index].cmp(record_a, record_b, sort.descending) or sort_util.EQ
 
                     if ordering == sort_util.LT then
@@ -765,7 +767,7 @@ local methods = {
             self.isSorted = true
         end
 
-	    for _, row in self.rows do
+	    for _, row in pairs(self.rows) do
 		    row:Hide()
 	    end
         local rowIndex = 1 - FauxScrollFrame_GetOffset(self.scrollFrame)
@@ -797,7 +799,7 @@ local methods = {
         row.indented = indented
         row.expandKey = expandKey
 
-        for i, column in self.columns do
+        for i, column in pairs(self.columns) do
 	        column.fill(row.cells[i], record, totalAuctions, totalPlayerAuctions, expandable, indented)
         end
     end,
@@ -807,7 +809,7 @@ local methods = {
         local selectedData = self:GetSelection()
         self.selected = selectedData and self.selected or nil
 
-        for _, row in self.rows do
+        for _, row in pairs(self.rows) do
             if self.selected and row.record and row.record.search_signature == self.selected.search_signature then
                 row.highlight:Show()
             else
@@ -821,7 +823,7 @@ local methods = {
     end,
 
     Reset = function(self)
-        T.wipe(self.expanded)
+        wipe(self.expanded)
         self:UpdateRowInfo()
         self:UpdateRows()
         self:SetSelectedRecord()
@@ -834,7 +836,7 @@ local methods = {
 
         local prevSelectedIndex
         if self.selected then
-            for i, row in self.rows do
+            for i, row in pairs(self.rows) do
                 if row:IsVisible() and row.record == self.selected then
                     prevSelectedIndex = i
                 end
@@ -861,7 +863,7 @@ local methods = {
     end,
 
     RemoveAuctionRecord = function(self, record)
-        local index = aux.key(self.records, record)
+        local index = key(self.records, record)
         if index then
             tremove(self.records, index)
         end
@@ -869,15 +871,15 @@ local methods = {
     end,
 
     ContainsRecord = function(self, record)
-        if aux.key(self.records, record) then
+        if key(self.records, record) then
             return true
         end
     end,
 
-    SetSort = T.vararg-function(arg)
+    SetSort = vararg-function(arg)
 	    local self = tremove(arg, 1)
         for _, v in ipairs(arg) do
-            for i, sort in self.sorts do
+            for i, sort in pairs(self.sorts) do
                 if sort.index == abs(v) then
                     tremove(self.sorts, i)
                     break
@@ -898,7 +900,7 @@ local methods = {
         if not self.selected then return end
         local selectedData
         for _, v in ipairs(self.rowInfo) do
-            for _, childInfo in v.children do
+            for _, childInfo in pairs(v.children) do
                 if childInfo.record.search_signature == self.selected.search_signature then
                     selectedData = childInfo
                     break
@@ -912,19 +914,19 @@ local methods = {
 function M.new(parent, rows, columns)
     local rt = CreateFrame('Frame', nil, parent)
     rt.columns = columns
-    rt.ROW_HEIGHT = ((parent:GetHeight() / parent:GetEffectiveScale()) - HEAD_HEIGHT - HEAD_SPACE) / rows
+    rt.ROW_HEIGHT = (parent:GetHeight() - HEAD_HEIGHT - HEAD_SPACE) / rows
     rt.expanded = {}
     rt.handlers = {}
     rt.sorts = {}
     rt.records = {}
     rt.rowInfo = {numDisplayRows=0}
 
-    for name, func in methods do
+    for name, func in pairs(methods) do
         rt[name] = func
     end
 
     rt:SetScript('OnShow', function()
-        for _, cell in this.headCells do
+        for _, cell in pairs(this.headCells) do
             if cell.info.isPrice then
                 cell:SetText(cell.info.title[price_per_unit and 1 or 2])
             end
@@ -936,19 +938,26 @@ function M.new(parent, rows, columns)
     contentFrame:SetPoint('BOTTOMRIGHT', 0, 0)
     rt.contentFrame = contentFrame
 
-    local scrollFrame = CreateFrame('ScrollFrame', gui.unique_name(), rt, 'FauxScrollFrameTemplate')
+    local scrollFrame = CreateFrame('ScrollFrame', gui.unique_name, rt, 'FauxScrollFrameTemplate')
     scrollFrame:SetScript('OnVerticalScroll', function()
 	    FauxScrollFrame_OnVerticalScroll(rt.ROW_HEIGHT, function() rt:UpdateRows() end)
     end)
     scrollFrame:SetAllPoints(contentFrame)
     rt.scrollFrame = scrollFrame
     FauxScrollFrame_Update(rt.scrollFrame, 0, rows, rt.ROW_HEIGHT)
-    
-    gui.set_scrollbar_style(scrollFrame, not gui.is_blizzard() and {
-        {'TOPRIGHT', parent, -4, -HEAD_HEIGHT}, {'BOTTOMRIGHT', parent, -4, 4} -- Default
-    } or {
-        {'TOPRIGHT', parent, -7, -20}, {'BOTTOMRIGHT', parent, -7, 18} -- Blizzard
-    })
+
+    local scrollBar = _G[scrollFrame:GetName() .. 'ScrollBar']
+    scrollBar:ClearAllPoints()
+    scrollBar:SetPoint('TOPRIGHT', rt, -4, -HEAD_HEIGHT)
+    scrollBar:SetPoint('BOTTOMRIGHT', rt, -4, 4)
+    scrollBar:SetWidth(10)
+    local thumbTex = scrollBar:GetThumbTexture()
+    thumbTex:SetPoint('CENTER', 0, 0)
+    thumbTex:SetTexture(color.content.background())
+    thumbTex:SetHeight(150)
+    thumbTex:SetWidth(scrollBar:GetWidth())
+    _G[scrollBar:GetName() .. 'ScrollUpButton']:Hide()
+    _G[scrollBar:GetName() .. 'ScrollDownButton']:Hide()
 
     rt.headCells = {}
     for i, column in ipairs(rt.columns) do
@@ -969,32 +978,24 @@ function M.new(parent, rows, columns)
         local text = cell:CreateFontString()
         text:SetJustifyH('CENTER')
         text:SetFont(gui.font, 12)
-        text:SetTextColor(aux.color.label.enabled())
+        text:SetTextColor(color.label.enabled())
         cell:SetFontString(text)
         if not column.isPrice then cell:SetText(column.title or '') end -- TODO
         text:SetAllPoints()
 
         local tex = cell:CreateTexture()
-        local highlight = cell:CreateTexture()
         tex:SetAllPoints()
-        highlight:SetAllPoints()
-        if not gui.is_blizzard() then
-            tex:SetTexture([[Interface\AddOns\aux-AddOn\WorldStateFinalScore-Highlight]])
-            tex:SetTexCoord(.017, 1, .083, .909)
-            tex:SetAlpha(.5)
-
-            highlight:SetTexture([[Interface\Buttons\UI-Listbox-Highlight]])
-            highlight:SetTexCoord(.025, .957, .087, .931)
-        else
-            tex:SetTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
-            tex:SetTexCoord(0.1, 0.8, 0, 1)
-
-            highlight:SetTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
-            highlight:SetTexCoord(0.1, 0.8, 0, 1)
-        end
-        highlight:SetAlpha(.2)
+        tex:SetTexture([[Interface\AddOns\aux-AddOn\WorldStateFinalScore-Highlight]])
+        tex:SetTexCoord(.017, 1, .083, .909)
+        tex:SetAlpha(.5)
         cell:SetNormalTexture(tex)
-        cell:SetHighlightTexture(highlight)
+
+        local tex = cell:CreateTexture()
+        tex:SetAllPoints()
+        tex:SetTexture([[Interface\Buttons\UI-Listbox-Highlight]])
+        tex:SetTexCoord(.025, .957, .087, .931)
+        tex:SetAlpha(.2)
+        cell:SetHighlightTexture(tex)
 
         tinsert(rt.headCells, cell)
     end
@@ -1018,11 +1019,7 @@ function M.new(parent, rows, columns)
         end
         local highlight = row:CreateTexture()
         highlight:SetAllPoints()
-        if not gui.is_blizzard() then
-            highlight:SetTexture(1, .9, 0, .5)
-        else
-            highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-        end
+        highlight:SetTexture(1, .9, 0, .5)
         highlight:Hide()
         row.highlight = highlight
 
@@ -1046,16 +1043,10 @@ function M.new(parent, rows, columns)
                 cell:SetPoint('TOPLEFT', row.cells[j - 1], 'TOPRIGHT')
             end
 
-            if gui.is_blizzard() or mod(j, 2) == 1 then
+            if mod(j, 2) == 1 then
                 local tex = cell:CreateTexture()
                 tex:SetAllPoints()
-                if not gui.is_blizzard() then
-                    tex:SetTexture(.3, .3, .3, .2)
-                else
-                    tex:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-                    tex:SetTexCoord(0.1, 0.8, 0, 1)
-                    tex:SetAlpha(0.3)
-                end
+                tex:SetTexture(.3, .3, .3, .2)
             end
 
             if column.init then

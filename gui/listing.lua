@@ -1,7 +1,8 @@
 module 'aux.gui.listing'
 
-local T = require 'T'
-local aux = require 'aux'
+include 'T'
+include 'aux'
+
 local gui = require 'aux.gui'
 
 local ROW_HEIGHT = 15
@@ -63,8 +64,8 @@ local methods = {
 		    self.headHeight = 0
 	    end
 
-	    if getn(self.rowData or T.empty) > self.numRows then
-		    self.contentFrame:SetPoint('BOTTOMRIGHT', gui.is_blizzard() and -30 or -15, 0)
+	    if getn(self.rowData or empty) > self.numRows then
+		    self.contentFrame:SetPoint('BOTTOMRIGHT', -15, 0)
 	    else
 		    self.contentFrame:SetPoint('BOTTOMRIGHT', 0, 0)
 	    end
@@ -75,7 +76,7 @@ local methods = {
 		    self:AddColumn()
 	    end
 
-	    for i, col in self.headCols do
+	    for i, col in pairs(self.headCols) do
 		    if self.colInfo[i] then
 			    col:Show()
 			    col:SetWidth(self.colInfo[i].width * width)
@@ -91,7 +92,7 @@ local methods = {
 		    self:AddRow()
 	    end
 
-	    for i, row in self.rows do
+	    for i, row in pairs(self.rows) do
 		    if i > self.numRows then
 			    row.data = nil
 			    row:Hide()
@@ -100,7 +101,7 @@ local methods = {
 			    while getn(row.cols) < getn(self.colInfo) do
 				    self:AddCell(i)
 			    end
-			    for j, col in row.cols do
+			    for j, col in pairs(row.cols) do
 				    if self.headCols[j] and self.colInfo[j] then
 					    col:Show()
 					    col:SetWidth(self.colInfo[j].width * width)
@@ -134,7 +135,7 @@ local methods = {
 	                row.highlight:Hide()
                 end
 
-                for j, col in row.cols do
+                for j, col in pairs(row.cols) do
                     if self.colInfo[j] then
                         local colData = data.cols[j]
                         if type(colData.value) == 'function' then
@@ -149,10 +150,10 @@ local methods = {
     end,
 
     SetData = function(self, rowData)
-	    for _, row in self.rowData or T.empty do
-		    for _, col in row.cols do T.release(col) end
-		    T.release(row.cols)
-		    T.release(row)
+	    for _, row in pairs(self.rowData or empty) do
+		    for _, col in pairs(row.cols) do release(col) end
+		    release(row.cols)
+		    release(row)
 	    end
         self.rowData = rowData
         self.updateSort = true
@@ -173,23 +174,18 @@ local methods = {
 	    local text = col:CreateFontString()
 	    text:SetAllPoints()
 	    text:SetFont(gui.font, 12)
-	    text:SetTextColor(aux.color.label.enabled())
+	    text:SetTextColor(color.label.enabled())
         col.text = text
 
 	    local tex = col:CreateTexture()
 	    tex:SetAllPoints()
-        if not gui.is_blizzard() then
-            tex:SetTexture([[Interface\AddOns\aux-AddOn\WorldStateFinalScore-Highlight]])
-            tex:SetTexCoord(.017, 1, .083, .909)
-            tex:SetAlpha(.5)
-        else
-            tex:SetTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
-            tex:SetTexCoord(0.1, 0.8, 0, 1)
-        end
+	    tex:SetTexture([[Interface\AddOns\aux-AddOn\WorldStateFinalScore-Highlight]])
+	    tex:SetTexCoord(.017, 1, .083, .909)
+	    tex:SetAlpha(.5)
 
         tinsert(self.headCols, col)
         
-        for i, row in self.rows do
+        for i, row in pairs(self.rows) do
             while getn(row.cols) < getn(self.headCols) do
                 self:AddCell(i)
             end
@@ -221,7 +217,7 @@ local methods = {
         local row = CreateFrame('Button', nil, self.contentFrame)
         row:SetHeight(ROW_HEIGHT)
         row:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
-        for name, func in handlers do
+        for name, func in pairs(handlers) do
 	        row:SetScript(name, func)
         end
         local rowNum = getn(self.rows) + 1
@@ -234,16 +230,12 @@ local methods = {
         end
         local highlight = row:CreateTexture()
         highlight:SetAllPoints()
-        if not gui.is_blizzard() then
-            highlight:SetTexture(1, .9, 0, .4)
-        else
-            highlight:SetTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
-        end
+        highlight:SetTexture(1, .9, 0, .4)
         highlight:Hide()
         row.highlight = highlight
         row.st = self
 
-        row.cols = T.acquire()
+        row.cols = T
         self.rows[rowNum] = row
         for _ = 1, getn(self.colInfo) do
             self:AddCell(rowNum)
@@ -266,10 +258,10 @@ local methods = {
 }
 
 function M.new(parent)
-    local st = CreateFrame('Frame', gui.unique_name(), parent)
+    local st = CreateFrame('Frame', gui.unique_name, parent)
     st:SetAllPoints()
 
-    st.numRows = max(floor(((parent:GetHeight() / parent:GetEffectiveScale()) - HEAD_HEIGHT - HEAD_SPACE) / ROW_HEIGHT), 0)
+    st.numRows = max(floor((parent:GetHeight() - HEAD_HEIGHT - HEAD_SPACE) / ROW_HEIGHT), 0)
 
     local contentFrame = CreateFrame('Frame', nil, st)
     contentFrame:SetPoint('TOPLEFT', 0, 0)
@@ -283,19 +275,26 @@ function M.new(parent)
     scrollFrame:SetAllPoints(contentFrame)
     st.scrollFrame = scrollFrame
 
-    gui.set_scrollbar_style(scrollFrame, not gui.is_blizzard() and {
-        {'TOPRIGHT', parent, -4, -HEAD_HEIGHT}, {'BOTTOMRIGHT', parent, -4, 4} -- Default
-    } or {
-        {'TOPRIGHT', parent, -7, -20}, {'BOTTOMRIGHT', parent, -7, 18} -- Blizzard
-    })
+    local scroll_bar = _G[scrollFrame:GetName() .. 'ScrollBar']
+    scroll_bar:ClearAllPoints()
+    scroll_bar:SetPoint('TOPRIGHT', st, -4, -HEAD_HEIGHT)
+    scroll_bar:SetPoint('BOTTOMRIGHT', st, -4, 4)
+    scroll_bar:SetWidth(10)
+    local thumbTex = scroll_bar:GetThumbTexture()
+    thumbTex:SetPoint('CENTER', 0, 0)
+    thumbTex:SetTexture(color.content.background())
+    thumbTex:SetHeight(150)
+    thumbTex:SetWidth(scroll_bar:GetWidth())
+    _G[scroll_bar:GetName() .. 'ScrollUpButton']:Hide()
+    _G[scroll_bar:GetName() .. 'ScrollDownButton']:Hide()
 
-    for name, func in methods do
+    for name, func in pairs(methods) do
         st[name] = func
     end
     
-    st.headCols = T.acquire()
-    st.rows = T.acquire()
-    st.handlers = T.acquire()
+    st.headCols = T
+    st.rows = T
+    st.handlers = T
     st.colInfo = DEFAULT_COL_INFO
 
     return st

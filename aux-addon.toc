@@ -1,13 +1,12 @@
-## Interface: 11200
+## Interface: 20400
 ## Author: shirsig
-## OptionalDeps: ShaguTweaks
 ## Title: aux
-## Notes: Remplacement de l'hôtel des ventes
-## SavedVariables: aux
+## Notes: Auction House replacement
+## SavedVariables: aux, aux_scale, aux_post_bid, aux_ignore_owner, aux_items, aux_item_ids, aux_auctionable_items, aux_merchant_buy, aux_merchant_sell
 
-libs\package.lua
+libs\compat.lua
+libs\module.lua
 libs\T.lua
-libs\ChatThrottleLib.lua
 
 aux-addon.lua
 util.lua
@@ -15,27 +14,27 @@ control.lua
 color.lua
 gui\core.lua
 frame.lua
+
 util\persistence.lua
 util\sort.lua
 util\money.lua
-core\cache.lua
 util\info.lua
+util\filter.lua
+util\scan.lua
+util\completion.lua
+
+core\cache.lua
 core\history.lua
 core\disenchant.lua
-util\filter.lua
-util\completion.lua
 core\slash.lua
 core\scan.lua
-util\scan.lua
 core\stack.lua
 core\post.lua
 core\tooltip.lua
-core\shortcut.lua
 
 gui\listing.lua
 gui\auction_listing.lua
 gui\item_listing.lua
-gui\purchase_summary.lua
 
 tabs\search\core.lua
 tabs\search\results.lua
@@ -52,7 +51,4 @@ tabs\auctions\frame.lua
 tabs\bids\core.lua
 tabs\bids\frame.lua
 
-core\crafting.lua
-
-localization.lua
 

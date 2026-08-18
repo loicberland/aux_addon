@@ -1,20 +1,19 @@
 module 'aux'
 
-local T = require 'T'
+local event_frame = CreateFrame'Frame'
 
-local event_frame = CreateFrame('Frame', 'AuxThreadingFrame')
-
-local listeners, threads = T.acquire(), T.acquire()
+local listeners, threads = T, T
 
 local thread_id
-function M.thread_id() return thread_id end
+function M.get_thread_id() return thread_id end
 
-function handle.LOAD()
+function LOAD()
+	event_frame:SetScript('OnUpdate', UPDATE)
 	event_frame:SetScript('OnEvent', EVENT)
 end
 
 function EVENT()
-	for id, listener in listeners do
+	for id, listener in pairs(listeners) do
 		if listener.killed then
 			listeners[id] = nil
 		elseif event == listener.event then
@@ -25,9 +24,9 @@ end
 
 do
 	function UPDATE()
-		for _, listener in listeners do
+		for _, listener in pairs(listeners) do
 			local event, needed = listener.event, false
-			for _, listener in listeners do
+			for _, listener in pairs(listeners) do
 				needed = needed or listener.event == event and not listener.killed
 			end
 			if not needed then
@@ -35,14 +34,9 @@ do
 			end
 		end
 
-		for id, thread in threads do
+		for id, thread in pairs(threads) do
 			if thread.killed or not thread.k then
 				threads[id] = nil
-				local hasLiveThread = false
-				for _ in pairs(threads) do hasLiveThread = true break end
-				if not hasLiveThread then -- Disable threading task so it doesn't consume resources doing nothing
-					event_frame:SetScript('OnUpdate', nil)
-				end
 			else
 				local k = thread.k
 				thread.k = nil
@@ -56,7 +50,7 @@ end
 
 do
 	local id = 0
-	function unique_id()
+	function get_unique_id()
 		id = id + 1
 		return id
 	end
@@ -77,11 +71,15 @@ function M.kill_thread(thread_id)
 end
 
 function M.event_listener(event, cb)
-	local listener_id = unique_id()
-	listeners[listener_id] = T.map(
+	local listener_id = unique_id
+	listeners[listener_id] = O(
 		'event', event,
 		'cb', cb,
-		'kill', T.vararg-function(arg) if getn(arg) == 0 or arg[1] then kill_listener(listener_id) end end
+		'kill', vararg-function(arg)
+			if arg.n == 0 or arg[1] then
+				kill_listener(listener_id)
+			end
+		end
 	)
 	event_frame:RegisterEvent(event)
 	return listener_id
@@ -94,30 +92,27 @@ end
 do
 	local mt = {
 		__call = function(self)
-			T.temp(self)
+			temp(self)
 			return self.f(unpack(self))
 		end,
 	}
 
-	M.thread = T.vararg-function(arg)
-		T.static(arg)
+	M.thread = vararg-function(arg)
+		static(arg)
 		arg.f = tremove(arg, 1)
-		local thread_id = unique_id()
-		threads[thread_id] = T.map('k', setmetatable(arg, mt))
-		if event_frame:GetScript("OnUpdate") == nil then -- Spin up threading if it was turned off
-			event_frame:SetScript('OnUpdate', UPDATE)
-		end
+		local thread_id = unique_id
+		threads[thread_id] = O('k', setmetatable(arg, mt))
 		return thread_id
 	end
 
-	M.wait = T.vararg-function(arg)
-		T.static(arg)
+	M.wait = vararg-function(arg)
+		static(arg)
 		arg.f = tremove(arg, 1)
 		threads[thread_id].k = setmetatable(arg, mt)
 	end
 end
 
-M.when = T.vararg-function(arg)
+M.when = vararg-function(arg)
 	local c = tremove(arg, 1)
 	local k = tremove(arg, 1)
 	if c() then

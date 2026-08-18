@@ -1,19 +1,24 @@
-if module 'T' then return end
+if defined 'T' then return end
+module 'T'
 
-local next, getn, setn, tremove, setmetatable = next, getn, table.setn, tremove, setmetatable
+local next, getn, tremove, setmetatable = next, getn, tremove, setmetatable
 
 local wipe, acquire, release
 local pool, pool_size, overflow_pool, auto_release = {}, 0, setmetatable({}, {__mode='k'}), {}
 
 function wipe(t)
 	setmetatable(t, nil)
-	for k in t do
+	for k, v in pairs(t) do
 		t[k] = nil
 	end
 	t.reset, t.reset = nil, 1
-	setn(t, 0)
 end
 M.wipe = wipe
+
+CreateFrame'Frame':SetScript('OnUpdate', function()
+	for t in pairs(auto_release) do release(t) end
+	wipe(auto_release)
+end)
 
 function acquire()
 	if pool_size > 0 then
@@ -29,19 +34,6 @@ function acquire()
 end
 M.acquire = acquire
 
-local f = CreateFrame('Frame', 'AuxGCFrame')
-local function AuxGCFrame_OnUpdate()
-	for t in auto_release do
-		release(t)
-	end
-	wipe(auto_release)
-	this:SetScript("OnUpdate", nil) -- Remove the script, it will be set back if anything is added to auto_release
-end
-local function autoRelease(t)
-	auto_release[t] = true
-	f:SetScript("OnUpdate", AuxGCFrame_OnUpdate)
-end
-
 function release(t)
 	wipe(t)
 	auto_release[t] = nil
@@ -55,43 +47,35 @@ end
 M.release = release
 
 do
-	local function f(_, v)
-		if v then
-			autoRelease(v)
-			return v
-		end
-	end
-	M.temp = setmetatable({}, {__metatable=false, __newindex=pass, __call=f, __sub=f})
+	local function f(_, v) if v then auto_release[v] = true; return v end end
+	M.temp = setmetatable({}, {__metatable=false, __newindex=nop, __call=f, __sub=f})
 end
 do
-	local function f(_, v)
-		if v then
-			auto_release[v] = nil
-			return v
-		end
-	end
-	M.static = setmetatable({}, {__metatable=false, __newindex=pass, __call=f, __sub=f})
+	local function f(_, v) if v then auto_release[v] = nil; return v end end
+	M.static = setmetatable({}, {__metatable=false, __newindex=nop, __call=f, __sub=f})
 end
 
+M.get_T = acquire
+
 do
-	local function unpack(t)
+	local function ret(t)
 		if getn(t) > 0 then
-			return tremove(t, 1), unpack(t)
+			return tremove(t, 1), ret(t)
 		else
 			release(t)
 		end
 	end
-	M.unpack = unpack
+	M.ret = ret
 end
 
-M.empty = setmetatable({}, {__metatable=false, __newindex=pass})
+M.empty = setmetatable({}, {__metatable=false, __newindex=nop})
 
 local vararg
 do
 	local MAXPARAMS = 100
 
 	local code = [[
-		local f, setn, acquire, autoRelease = f, setn, acquire, autoRelease
+		local f, acquire, auto_release = f, acquire, auto_release
 		return function(
 	]]
 	for i = 1, MAXPARAMS - 1 do
@@ -109,8 +93,8 @@ do
 	code = code .. [[
 		until true
 		local t = acquire()
-		autoRelease(t)
-		setn(t, n)
+		auto_release[t] = true
+		t.n = n
 		repeat
 	]]
 	for i = 1, MAXPARAMS - 1 do
@@ -122,35 +106,34 @@ do
 		end
 	]]
 
-	local chunk = loadstring(code)
-	local chunkEnv = {setn=setn, acquire=acquire, auto_release=auto_release, autoRelease=autoRelease}
-	setfenv(chunk, chunkEnv)
 	function vararg(f)
-		chunkEnv.f = f
+		local chunk = loadstring(code)
+		setfenv(chunk, {f=f, acquire=acquire, auto_release=auto_release})
 		return chunk()
 	end
 	M.vararg = setmetatable({}, {
 		__metatable = false,
-		__sub = function(_, v)
-			return vararg(v)
-		end,
+		__sub = function(_, v) return vararg(v) end,
 	})
 end
 
-M.list = vararg(function(arg)
-	auto_release[arg] = nil
-	return arg
-end)
-M.set = vararg(function(arg)
+M.A = vararg(function(arg)
 	local t = acquire()
-	for _, v in arg do
-		t[v] = true
+	for i = 1, arg.n do
+		t[i] = arg[i]
 	end
 	return t
 end)
-M.map = vararg(function(arg)
+M.S = vararg(function(arg)
 	local t = acquire()
-	for i = 1, getn(arg), 2 do
+	for i = 1, arg.n do
+		t[arg[i]] = true
+	end
+	return t
+end)
+M.O = vararg(function(arg)
+	local t = acquire()
+	for i = 1, arg.n, 2 do
 		t[arg[i]] = arg[i + 1]
 	end
 	return t

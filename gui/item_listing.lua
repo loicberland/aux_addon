@@ -1,7 +1,8 @@
 module 'aux.gui.item_listing'
 
-local T = require 'T'
-local aux = require 'aux'
+include 'T'
+include 'aux'
+
 local info = require 'aux.util.info'
 local gui = require 'aux.gui'
 
@@ -9,8 +10,8 @@ local ROW_HEIGHT = 39
 
 function M:render()
 
-	if getn(self.item_records or T.empty) > getn(self.rows) then
-		self.content_frame:SetPoint('BOTTOMRIGHT', gui.is_blizzard() and -30 or -15, 0)
+	if getn(self.item_records or empty) > getn(self.rows) then
+		self.content_frame:SetPoint('BOTTOMRIGHT', -15, 0)
 	else
 		self.content_frame:SetPoint('BOTTOMRIGHT', 0, 0)
 	end
@@ -20,7 +21,7 @@ function M:render()
 
 	local rows = self.rows
 
-	for i, row in rows do
+	for i, row in pairs(rows) do
 		local item_record = self.item_records[i + offset]
 
         if item_record then
@@ -50,22 +51,29 @@ function M.new(parent, on_click, selected)
 	local content_frame = CreateFrame('Frame', nil, parent)
 	content_frame:SetAllPoints()
 
-	local scroll_frame = CreateFrame('ScrollFrame', gui.unique_name(), parent, 'FauxScrollFrameTemplate')
+	local scroll_frame = CreateFrame('ScrollFrame', gui.unique_name, parent, 'FauxScrollFrameTemplate')
 	scroll_frame:SetScript('OnVerticalScroll', function()
 		FauxScrollFrame_OnVerticalScroll(ROW_HEIGHT, function() render(this.item_listing) end)
 	end)
 	scroll_frame:SetPoint('TOPLEFT', content_frame, 'TOPLEFT', 0, 29)
 	scroll_frame:SetPoint('BOTTOMRIGHT', content_frame, 'BOTTOMRIGHT', 0, 0)
 
-    gui.set_scrollbar_style(scroll_frame, not gui.is_blizzard() and {
-        {'TOPRIGHT', parent, -4, 2}, {'BOTTOMRIGHT', parent, -4, 4} -- Default
-    } or {
-        {'TOPRIGHT', parent, -7, -14}, {'BOTTOMRIGHT', parent, -7, 18} -- Blizzard
-    })
+	local scroll_bar = _G[scroll_frame:GetName() .. 'ScrollBar']
+	scroll_bar:ClearAllPoints()
+	scroll_bar:SetPoint('TOPRIGHT', parent, -4, 2)
+	scroll_bar:SetPoint('BOTTOMRIGHT', parent, -4, 4)
+	scroll_bar:SetWidth(10)
+	local thumbTex = scroll_bar:GetThumbTexture()
+	thumbTex:SetPoint('CENTER', 0, 0)
+	thumbTex:SetTexture(color.content.background())
+	thumbTex:SetHeight(150)
+	thumbTex:SetWidth(scroll_bar:GetWidth())
+	_G[scroll_bar:GetName() .. 'ScrollUpButton']:Hide()
+	_G[scroll_bar:GetName() .. 'ScrollDownButton']:Hide()
 
-	local rows = T.acquire()
+	local rows = T
 	local row_index = 1
-	local max_height = content_frame:GetHeight() / content_frame:GetEffectiveScale()
+	local max_height = content_frame:GetHeight()
 	local total_height = 0
 	while total_height + ROW_HEIGHT < max_height do
 		local row = CreateFrame('Frame', nil, content_frame)
@@ -97,12 +105,7 @@ function M.new(parent, on_click, selected)
 		local highlight = row:CreateTexture()
 		highlight:SetAllPoints(row)
 		highlight:Hide()
-        if not gui.is_blizzard() then
-            highlight:SetTexture(1, .9, 0, .4)
-        else
-            highlight:SetTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
-            highlight:SetTexCoord(0.1, 0.8, 0, 1)
-        end
+		highlight:SetTexture(1, .9, 0, .4)
 		row.highlight = highlight
 
 		rows[row_index] = row
