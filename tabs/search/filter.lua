@@ -8,6 +8,33 @@ local filter_util = require 'aux.util.filter'
 local post_filter = {}
 local post_filter_index = 0
 
+local filter_labels = {
+	['and'] = 'et',
+	['or'] = 'ou',
+	['not'] = 'non',
+	['price'] = 'prix',
+	['profit'] = 'bénéfice',
+	['vendor-profit'] = 'bénéfice marchand',
+	['disenchant-profit'] = 'bénéfice désenchantement',
+	['percent'] = 'pourcentage',
+	['bid-price'] = "prix d'enchère",
+	['bid-profit'] = "bénéfice d'enchère",
+	['bid-vendor-profit'] = "bénéfice enchère/marchand",
+	['bid-disenchant-profit'] = "bénéfice enchère/désenchantement",
+	['bid-percent'] = "pourcentage d'enchère",
+	['item'] = 'objet',
+	['tooltip'] = 'infobulle',
+	['min-level'] = 'niveau min.',
+	['max-level'] = 'niveau max.',
+	['rarity'] = 'rareté',
+	['left'] = 'temps restant',
+	['utilizable'] = 'utilisable',
+}
+
+local function filter_label(filter)
+	return filter_labels[filter] or filter
+end
+
 function valid_level(str)
 	local level = tonumber(str)
 	return level and bounded(1, 70, level)
@@ -210,7 +237,7 @@ function formatted_post_filter(components)
 		no_line_break = component[1] == 'operator' and component[2] == 'not'
 
 		local filter_color = (post_filter_index == i and color.gold or color.orange)
-		local component_text = filter_color(component[2])
+		local component_text = filter_color(filter_label(component[2]))
 		if component[1] == 'operator' and component[2] ~= 'not' then
 			component_text = component_text .. filter_color(tonumber(component[3]) or '')
 			tinsert(stack, component[3])
@@ -235,7 +262,7 @@ function formatted_post_filter(components)
 		str = str .. data_link(i, component_text)
 	end
 
-	return '<html><body><p>' .. data_link(0, 'Post Filter:') .. '</p><p>' .. str .. '</p></body></html>'
+	return '<html><body><p>' .. data_link(0, 'Filtre avancé :') .. '</p><p>' .. str .. '</p></body></html>'
 end
 
 function data_link(id, str)
@@ -324,7 +351,7 @@ end
 function initialize_filter_dropdown()
 	for _, filter in ipairs(temp-A('and', 'or', 'not', 'price', 'profit', 'vendor-profit', 'disenchant-profit', 'percent', 'bid-price', 'bid-profit', 'bid-vendor-profit', 'bid-disenchant-profit', 'bid-percent', 'item', 'tooltip', 'min-level', 'max-level', 'rarity', 'left', 'utilizable')) do
 		UIDropDownMenu_AddButton(O(
-			'text', filter,
+			'text', filter_label(filter),
 			'value', filter,
 			'func', function()
 				filter_input:SetText(this.value)

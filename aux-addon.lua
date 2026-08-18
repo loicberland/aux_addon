@@ -50,7 +50,7 @@ do
 			for _, f in pairs(handlers) do f() end
 		elseif event == 'PLAYER_LOGIN' then
 			for _, f in pairs(handlers2) do f() end
-			print('loaded - /aux')
+			print('chargé - /aux')
 		else
 			_M[event]()
 		end
@@ -83,7 +83,7 @@ do
 		local scope = scope
 		M[scope .. '_data'] = function(key, init)
 			if not cache[scope]
-				then error('Cache not ready', 2)
+				then error('Cache non prêt', 2)
 			end
 			cache[scope][key] = cache[scope][key] or {}
 			for k, v in pairs(init or empty) do

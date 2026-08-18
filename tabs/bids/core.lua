@@ -7,7 +7,7 @@ local info = require 'aux.util.info'
 local scan_util = require 'aux.util.scan'
 local scan = require 'aux.core.scan'
 
-TAB 'Bids'
+TAB 'Enchères suivies'
 
 auction_records = {}
 
@@ -31,7 +31,7 @@ end
 function M.scan_bids()
 
     status_bar:update_status(0, 0)
-    status_bar:set_text('Scanning auctions...')
+    status_bar:set_text('Analyse des enchères...')
 
     wipe(auction_records)
     update_listing()
@@ -42,12 +42,12 @@ function M.scan_bids()
         end,
         on_complete = function()
             status_bar:update_status(1, 1)
-            status_bar:set_text('Scan complete')
+            status_bar:set_text('Analyse terminée')
             update_listing()
         end,
         on_abort = function()
             status_bar:update_status(1, 1)
-            status_bar:set_text('Scan aborted')
+            status_bar:set_text('Analyse interrompue')
         end,
     }
 end

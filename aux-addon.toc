@@ -1,7 +1,7 @@
 ## Interface: 20400
 ## Author: shirsig
 ## Title: aux
-## Notes: Auction House replacement
+## Notes: Remplacement de l'hôtel des ventes
 ## SavedVariables: aux, aux_scale, aux_post_bid, aux_ignore_owner, aux_items, aux_item_ids, aux_auctionable_items, aux_merchant_buy, aux_merchant_sell
 
 libs\compat.lua
@@ -50,5 +50,4 @@ tabs\auctions\frame.lua
 
 tabs\bids\core.lua
 tabs\bids\frame.lua
-
 

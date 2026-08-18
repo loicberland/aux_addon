@@ -15,7 +15,7 @@ local cache = require 'aux.core.cache'
 local item_listing = require 'aux.gui.item_listing'
 local al = require 'aux.gui.auction_listing'
 
-TAB 'Post'
+TAB 'Vente'
 
 local DURATION_2, DURATION_8, DURATION_12, DURATION_24, DURATION_48 = 120, 480, 720, 1440, 2880
 
@@ -24,7 +24,7 @@ local settings_schema = {'tuple', '#', {duration='number'}, {start_price='number
 local scan_id, inventory_records, bid_records, buyout_records = 0, {}, {}, {}
 
 function get_default_settings()
-	return O('duration', DURATION_24, 'start_price', 0, 'buyout_price', 0, 'hidden', false)
+	return O('duration', DURATION_12, 'start_price', 0, 'buyout_price', 0, 'hidden', false)
 end
 
 function LOAD2()
@@ -33,7 +33,7 @@ end
 
 function read_settings(item_key)
 	item_key = item_key or selected_item.key
-	return data[item_key] and persistence.read(settings_schema, data[item_key]) or default_settings
+	return data[item_key] and persistence.read(settings_schema, data[item_key]) or get_default_settings()
 end
 function write_settings(settings, item_key)
 	item_key = item_key or selected_item.key
@@ -176,8 +176,8 @@ function update_auction_listing(listing, records, reference)
 end
 
 function update_auction_listings()
-	update_auction_listing('bid', bid_records, unit_start_price)
-	update_auction_listing('buyout', buyout_records, unit_buyout_price)
+	update_auction_listing('bid', bid_records, get_unit_start_price())
+	update_auction_listing('buyout', buyout_records, get_unit_buyout_price())
 end
 
 function M.select_item(item_key)
@@ -192,23 +192,46 @@ end
 function price_update()
     if selected_item then
         local historical_value = history.value(selected_item.key)
-        if bid_selection or buyout_selection then
-	        unit_start_price = undercut(bid_selection or buyout_selection, stack_size_slider:GetValue())
-          unit_start_price_input:SetText(money.to_string(unit_start_price, true, nil, nil, true))
+        if get_bid_selection() or get_buyout_selection() then
+	        set_unit_start_price(undercut(get_bid_selection() or get_buyout_selection(), stack_size_slider:GetValue()))
+	        unit_start_price_input:SetText(money.to_string(get_unit_start_price(), true, nil, nil, true))
         end
-        if buyout_selection then
-	        unit_buyout_price = undercut(buyout_selection, stack_size_slider:GetValue())
-	        unit_buyout_price_input:SetText(money.to_string(unit_buyout_price, true, nil, nil, true))
+        if get_buyout_selection() then
+	        set_unit_buyout_price(undercut(get_buyout_selection(), stack_size_slider:GetValue()))
+	        unit_buyout_price_input:SetText(money.to_string(get_unit_buyout_price(), true, nil, nil, true))
         end
-        start_price_percentage:SetText(historical_value and al.percentage_historical(round(unit_start_price / historical_value * 100)) or '---')
-        buyout_price_percentage:SetText(historical_value and al.percentage_historical(round(unit_buyout_price / historical_value * 100)) or '---')
+        start_price_percentage:SetText(historical_value and al.percentage_historical(round(get_unit_start_price() / historical_value * 100)) or '---')
+        buyout_price_percentage:SetText(historical_value and al.percentage_historical(round(get_unit_buyout_price() / historical_value * 100)) or '---')
     end
+end
+
+-- Après le scan, utilise le rachat unitaire concurrent le moins cher pour les
+-- deux prix. Les propres enchères sont ignorées pour éviter de s'aligner sur soi-même.
+function set_default_prices_from_scan(item_key)
+	local lowest_buyout
+	for _, record in pairs(buyout_records[item_key] or empty) do
+		if not record.own and record.unit_price and record.unit_price > 0 and (not lowest_buyout or record.unit_price < lowest_buyout) then
+			lowest_buyout = record.unit_price
+		end
+	end
+
+	if not lowest_buyout then
+		return
+	end
+
+	local default_price = max(1, floor(lowest_buyout * 1.00))
+	set_bid_selection()
+	set_buyout_selection()
+	set_unit_start_price(default_price)
+	set_unit_buyout_price(default_price)
+	unit_start_price_input:SetText(money.to_string(default_price, true, nil, nil, true))
+	unit_buyout_price_input:SetText(money.to_string(default_price, true, nil, nil, true))
 end
 
 function post_auctions()
 	if selected_item then
-        local unit_start_price = unit_start_price
-        local unit_buyout_price = unit_buyout_price
+        local unit_start_price = get_unit_start_price()
+        local unit_buyout_price = get_unit_buyout_price()
         local stack_size = stack_size_slider:GetValue()
         local stack_count
         stack_count = stack_count_slider:GetValue()
@@ -259,11 +282,11 @@ function validate_parameters()
         post_button:Disable()
         return
     end
-    if unit_buyout_price > 0 and unit_start_price > unit_buyout_price then
+    if get_unit_buyout_price() > 0 and get_unit_start_price() > get_unit_buyout_price() then
         post_button:Disable()
         return
     end
-    if unit_start_price == 0 then
+    if get_unit_start_price() == 0 then
         post_button:Disable()
         return
     end
@@ -281,7 +304,7 @@ function update_item_configuration()
         item.texture:SetTexture(nil)
         item.count:SetText()
         item.name:SetTextColor(color.label.enabled())
-        item.name:SetText('No item selected')
+        item.name:SetText('Aucun objet sélectionné')
 
         unit_start_price_input:Hide()
         unit_buyout_price_input:Hide()
@@ -319,7 +342,7 @@ function update_item_configuration()
             local duration_factor = UIDropDownMenu_GetSelectedValue(duration_dropdown) / 120
             local stack_size, stack_count = selected_item.max_charges and 1 or stack_size_slider:GetValue(), stack_count_slider:GetValue()
             local amount = floor(selected_item.unit_vendor_price * deposit_factor * stack_size) * stack_count * duration_factor
-            deposit:SetText('Deposit: ' .. money.to_string(amount, nil, nil, color.text.enabled))
+            deposit:SetText('Dépôt : ' .. money.to_string(amount, nil, nil, color.text.enabled))
         end
 
         refresh_button:Enable()
@@ -456,11 +479,12 @@ end
 function refresh_entries()
 	if selected_item then
         local item_key = selected_item.key
-		bid_selection, buyout_selection = nil, nil
+		set_bid_selection()
+		set_buyout_selection()
         bid_records[item_key], buyout_records[item_key] = nil, nil
         local query = scan_util.item_query(selected_item.item_id)
         status_bar:update_status(0, 0)
-        status_bar:set_text('Scanning auctions...')
+        status_bar:set_text('Analyse des enchères...')
 
 		scan_id = scan.start{
             type = 'list',
@@ -468,7 +492,7 @@ function refresh_entries()
 			queries = A(query),
 			on_page_loaded = function(page, total_pages)
                 status_bar:update_status(page / total_pages, 0) -- TODO
-                status_bar:set_text(format('Scanning Page %d / %d', page, total_pages))
+                status_bar:set_text(format('Analyse de la page %d / %d', page, total_pages))
 			end,
 			on_auction = function(auction_record)
 				if auction_record.item_key == item_key then
@@ -485,14 +509,15 @@ function refresh_entries()
 			on_abort = function()
 				bid_records[item_key], buyout_records[item_key] = nil, nil
                 status_bar:update_status(1, 1)
-                status_bar:set_text('Scan aborted')
+                status_bar:set_text('Analyse interrompue')
 			end,
 			on_complete = function()
 				bid_records[item_key] = bid_records[item_key] or T
 				buyout_records[item_key] = buyout_records[item_key] or T
+                set_default_prices_from_scan(item_key)
                 refresh = true
                 status_bar:update_status(1, 1)
-                status_bar:set_text('Scan complete')
+                status_bar:set_text('Analyse terminée')
             end,
 		}
 	end
@@ -550,17 +575,17 @@ function initialize_duration_dropdown()
         refresh = true
     end
     UIDropDownMenu_AddButton{
-	    text = '12 Hours',
+		    text = '12 heures',
 	    value = DURATION_12,
 	    func = on_click,
     }
     UIDropDownMenu_AddButton{
-	    text = '24 Hours',
+		    text = '24 heures',
 	    value = DURATION_24,
 	    func = on_click,
     }
     UIDropDownMenu_AddButton{
-	    text = '48 Hours',
+		    text = '48 heures',
 	    value = DURATION_48,
 	    func = on_click,
     }

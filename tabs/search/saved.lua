@@ -61,9 +61,9 @@ handlers = {
 				u(d)
 			elseif st == favorite_searches_listing then
 				gui.menu(
-					'Move Up', function() move_up(favorite_searches, data.index); u() end,
-					'Move Down', function() move_down(favorite_searches, data.index); u() end,
-					'Delete', function() tremove(favorite_searches, data.index); u() end
+					'Monter', function() move_up(favorite_searches, data.index); u() end,
+					'Descendre', function() move_down(favorite_searches, data.index); u() end,
+					'Supprimer', function() tremove(favorite_searches, data.index); u() end
 				)
 			end
 		end
@@ -89,7 +89,7 @@ function add_favorite(filter_string)
 		))
 		update_search_listings()
 	else
-		print('Invalid filter:', error)
+		print('Filtre invalide :', error)
 	end
 end
 
